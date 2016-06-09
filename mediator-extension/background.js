@@ -1,14 +1,13 @@
 "use strict";
 
 var pendingPaymentRequest = null;
-var pendingResponseCallback = null;
 var paymentTab = null;
 
-function show(paymentRequest, sendResponse) {
+function paymentrequest_show(paymentRequest, sendResponse) {
     console.log("show: " + JSON.stringify(paymentRequest));
     // TODO: Handle the case where there is already a pending request
     pendingPaymentRequest = JSON.parse(paymentRequest);
-    pendingResponseCallback = sendResponse;
+    pendingPaymentRequest.responseCallback = sendResponse;
     chrome.tabs.create({url: "select-payment-app.html", active: false}, function(tab) {
         paymentTab = tab;
         chrome.windows.create(
@@ -38,27 +37,27 @@ function getRequest(sendResponse) {
 }
 
 function submitPaymentResponse(paymentResponse, sendResponse) {
-    console.log("submitPaymentResponse: " + JSON.stringify(paymentResponse));
+    console.log("PaymentRequest.respond: " + JSON.stringify(paymentResponse));
     if (paymentTab) {
         chrome.tabs.remove(paymentTab.id);
         paymentTab = null;
     }
-    if (pendingResponseCallback) {
-        pendingResponseCallback({to: "webpayments-polyfill.js", response: paymentResponse});
-        pendingResponseCallback = null;
+    if (pendingPaymentRequest.responseCallback) {
+        pendingPaymentRequest.responseCallback({to: "webpayments-polyfill.js", response: paymentResponse});
+        pendingPaymentRequest.responseCallback = null;
     }
     pendingPaymentRequest = null;
     sendResponse({to: "webpayments-polyfill.js", result: true});
 }
 
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-    if (message.command == "show") {
-        return show(message.param, sendResponse);
-    } else if (message.command == "registerPaymentApp") {
+    if (message.command == "PaymentRequest.show") {
+        return paymentrequest_show(message.param, sendResponse);
+    } else if (message.command == "PaymentApp.register") {
         return registerPaymentApp(message.param, sendResponse);
-    } else if (message.command == "getRequest") {
+    } else if (message.command == "PaymentRequest.getCurrent") {
         return getRequest(sendResponse);
-    } else if (message.command == "submitPaymentResponse") {
+    } else if (message.command == "PaymentRequest.respond") {
         return submitPaymentResponse(message.param, sendResponse);
     } else {
         sendResponse({to: "webpayments-polyfill.js", error: "Unknown command: " + message.command});

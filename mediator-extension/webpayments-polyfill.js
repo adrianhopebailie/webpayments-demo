@@ -11,34 +11,10 @@ var sendMessage = function(command, param, callback) {
     window.postMessage({to: "background.js", command: command, param: param}, "*");
 }
 
-navigator.payments = {
-    registerPaymentApp: function(paymentApp) {
-        console.log("navigator.payments.registerPaymentApp() called");
-        sendMessage("registerPaymentApp", paymentApp);
-    },
-    getRequest: function() {
-        console.log("navigator.payments.getRequest() called");
-        return new Promise(function(resolve, reject) {
-            sendMessage("getRequest", false, function(response) {
-                if (response.error) {
-                    reject(response.error);
-                } else {
-                    resolve(response.request);
-                }
-            });
-        });
-    },
-    submitPaymentResponse: function(paymentResponse) {
-        console.log("navigator.payments.submitPaymentResponse() called");
-        return new Promise(function(resolve, reject) {
-            sendMessage("submitPaymentResponse", paymentResponse, function(response) {
-                if (response.error) {
-                    reject(response.error);
-                } else {
-                    resolve(response.result);
-                }
-            });
-        });
+var PaymentApp = {
+    register: function(paymentApp) {
+        console.log("PaymentApp.register() called");
+        sendMessage("PaymentApp.register", paymentApp);
     }
 }
 
@@ -47,11 +23,12 @@ function PaymentRequest(supportedMethods, details, options, data) {
     this.details = details;
     this.options = options;
     this.data = data;
+    this.responseCallback = null;
     this.show = function() {
         console.log("PaymentRequest.show() called");
         var request = JSON.stringify(this);
         return new Promise(function(resolve, reject) {
-            sendMessage("show", request, function(response) {
+            sendMessage("PaymentRequest.show", request, function(response) {
                 if (response.error) {
                     reject(response.error);
                 } else {
@@ -59,5 +36,49 @@ function PaymentRequest(supportedMethods, details, options, data) {
                 }
             });
         });
+    };
+    this.respond = function(paymentResponse) {
+        console.log("PaymentRequest.respond() called");
+        return new Promise(function(resolve, reject) {
+            sendMessage("PaymentRequest.respond", paymentResponse, function(response) {
+                if (response.error) {
+                    reject(response.error);
+                } else {
+                    resolve(response.result);
+                }
+            });
+        });
+    };
+    this.getMethodData = function(methodIdentifier) {
+      //TODO: Loop through all the method data and see if the given identifier exists
+      //If it does, return the method specific data
+      //For now just return and empty object implying that all methods are supported
+        return {};
+    };
+}
+
+PaymentRequest.prototype.getCurrent = function() {
+    console.log("PaymentRequest.getCurrent() called");
+    return new Promise(function(resolve, reject) {
+        sendMessage("PaymentRequest.getCurrent", false, function(response) {
+            if (response.error) {
+                reject(response.error);
+            } else {
+                resolve(response.request);
+            }
+        });
+    });
+}
+
+PaymentRequest.prototype.isPaymentRequest = function(request) {
+    console.log("PaymentRequest.isPaymentRequest() called");
+    //TODO Put some logic here to evaluate the request properly
+    return true;
+}
+
+var PaymentResponse = {
+    submit : function(methodIdentifier, data){
+        console.log("PaymentResponse.submit() called");
+
     }
 }
